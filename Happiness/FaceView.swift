@@ -8,20 +8,28 @@
 
 import UIKit
 
+protocol FaceViewDataSource: class {
+    func smilinessForFaceView(sender: FaceView) -> Double?
+}
+
+@IBDesignable // builds the view in the storyboard. 
 class FaceView: UIView {
     
+    @IBInspectable // allows you to set property defaults in storyboard
     var lineWidth: CGFloat = 3 {
         didSet {
             setNeedsDisplay()
         }
     }
     
+    @IBInspectable
     var color: UIColor = UIColor.blueColor() {
         didSet {
             setNeedsDisplay()
         }
     }
     
+    @IBInspectable
     var scale: CGFloat = 0.90 {
         didSet{
             setNeedsDisplay()
@@ -33,8 +41,10 @@ class FaceView: UIView {
     }
     
     var faceRadius: CGFloat {
-        return min(bounds.size.width, bounds.size.height) / 2 * 0.9
+        return min(bounds.size.width, bounds.size.height) / 2 * scale
     }
+    
+    weak var dataSource: FaceViewDataSource? // if you don't explicitly state that the protocol a class, you can't have a weak modifier against it.
     
     // Constants.
     private struct Scaling {
@@ -84,6 +94,13 @@ class FaceView: UIView {
         path.lineWidth = lineWidth
         return path
     }
+    
+    func scale(gesture: UIPinchGestureRecognizer) {
+        if gesture.state == .Changed {
+            scale *= gesture.scale
+            gesture.scale = 1
+        }
+    }
 
     override func drawRect(rect: CGRect) {
         let facePath = UIBezierPath(arcCenter: faceCenter, radius: faceRadius, startAngle: 0, endAngle: CGFloat(2*M_PI), clockwise: true)
@@ -94,7 +111,7 @@ class FaceView: UIView {
         bezierPathForEye(.Left).stroke()
         bezierPathForEye(.Right).stroke()
         
-        let smiliness = -0.75
+        var smiliness = dataSource?.smilinessForFaceView(self) ?? 0.0;
         let smilePath = bezierPathForSmile(smiliness)
         smilePath.stroke()
     }
